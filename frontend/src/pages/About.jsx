@@ -1,7 +1,7 @@
 import { Card, CardContent } from "../components/ui/card";
 import profileImg from "../image/profile.jpg";
 
-export default function HomePage() {
+export default function About() {
   return (
     <div className="max-w-lg mx-auto p-6 space-y-6 text-center">
       <img src={profileImg} alt="Profile" className="w-55 h-64 mx-auto rounded-full" />
