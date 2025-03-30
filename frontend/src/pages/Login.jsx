@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import ReCAPTCHA from 'react-google-recaptcha';
 import '../App.css';
 
 function Login() {
@@ -9,7 +11,9 @@ function Login() {
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaValue, setRecaptchaValue] = useState(null);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,41 +21,88 @@ function Login() {
     setIsLoading(true);
     
     try {
-      const endpoint = isLogin ? 'login' : 'register';
-      const formData = new FormData();
-      
-      // Always append name and password
-      formData.append('name', name);
-      formData.append('password', password);
-      
-      // Only append avatar for registration
-      if (!isLogin && avatar) {
-        formData.append('avatar', avatar);
+      if (isLogin) {
+        if (!recaptchaValue) {
+          setError('Please complete the reCAPTCHA verification');
+          setIsLoading(false);
+          return;
+        }
+
+        // For login, use JSON format
+        const loginData = { 
+          name, 
+          password,
+          recaptchaToken: recaptchaValue 
+        };
+        console.log('Attempting login with:', { name, password: '***' });
+        
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(loginData)
+        });
+
+        console.log('Login response status:', response.status);
+        const data = await response.json();
+        console.log('Login response data:', data);
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        // Store token in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Update auth context
+        login(data.token, data.user);
+        
+        // Redirect to home page
+        navigate('/');
+      } else {
+        // For registration, use FormData
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('password', password);
+        
+        if (avatar) {
+          formData.append('avatar', avatar);
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Registration failed');
+        }
+
+        // Store token in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Update auth context
+        login(data.token, data.user);
+        
+        // Redirect to home page
+        navigate('/');
       }
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/${endpoint}`, {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `${isLogin ? 'Login' : 'Registration'} failed`);
-      }
-
-      // Store token in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
-      // Redirect to home page
-      navigate('/');
     } catch (err) {
       console.error('Error:', err);
       setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRecaptchaChange = (value) => {
+    console.log('reCAPTCHA value:', value);
+    setRecaptchaValue(value);
   };
 
   const handleAvatarChange = (e) => {
@@ -97,6 +148,15 @@ function Login() {
             disabled={isLoading}
           />
         </div>
+        {isLogin && (
+          <div className="form-group">
+            <ReCAPTCHA
+              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+              onChange={handleRecaptchaChange}
+              theme="light"
+            />
+          </div>
+        )}
         {!isLogin && (
           <div className="form-group">
             <label htmlFor="avatar">Avatar (optional):</label>
@@ -126,6 +186,7 @@ function Login() {
             setIsLogin(!isLogin);
             setError('');
             setAvatar(null);
+            setRecaptchaValue(null);
           }}
           disabled={isLoading}
         >

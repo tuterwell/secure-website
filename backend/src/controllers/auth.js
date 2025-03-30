@@ -5,6 +5,24 @@ import path from 'path';
 
 const prisma = new PrismaClient();
 
+const verifyRecaptcha = async (token) => {
+  try {
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+    });
+
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    console.error('reCAPTCHA verification error:', error);
+    return false;
+  }
+};
+
 export const register = async (req, res) => {
   try {
     const { name, password } = req.body;
@@ -73,11 +91,17 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { name, password } = req.body;
+    const { name, password, recaptchaToken } = req.body;
     console.log('Login attempt for user:', name);
 
-    if (!name || !password) {
-      return res.status(400).json({ message: 'Name and password are required' });
+    if (!name || !password || !recaptchaToken) {
+      return res.status(400).json({ message: 'Name, password, and reCAPTCHA verification are required' });
+    }
+
+    // Verify reCAPTCHA
+    const isRecaptchaValid = await verifyRecaptcha(recaptchaToken);
+    if (!isRecaptchaValid) {
+      return res.status(400).json({ message: 'reCAPTCHA verification failed' });
     }
 
     // Check if user exists
