@@ -9,25 +9,7 @@ export default function MessageBoard() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [csrfToken, setCsrfToken] = useState("");
   const { isLoggedIn, user } = useAuth();
-
-  // Fetch CSRF token
-  const fetchCsrfToken = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/csrf-token`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch CSRF token');
-      const data = await response.json();
-      setCsrfToken(data.csrfToken);
-    } catch (err) {
-      console.error('Error fetching CSRF token:', err);
-    }
-  };
 
   // Fetch posts
   const fetchPosts = async () => {
@@ -48,7 +30,6 @@ export default function MessageBoard() {
   };
 
   useEffect(() => {
-    fetchCsrfToken();
     fetchPosts();
   }, []);
 
@@ -69,8 +50,7 @@ export default function MessageBoard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'X-CSRF-Token': csrfToken
+          'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
         body: JSON.stringify({ message }),
@@ -100,8 +80,7 @@ export default function MessageBoard() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts/${postId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-CSRF-Token': csrfToken
+          'Authorization': `Bearer ${token}`
         },
         credentials: 'include'
       });
