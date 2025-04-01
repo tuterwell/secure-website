@@ -17,17 +17,22 @@ const __dirname = path.dirname(__filename);
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
+
+// CORS configuration for cloud deployment
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  origin: process.env.FRONTEND_URL || 'https://your-frontend-domain.vercel.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
-// CSRF Protection with double submit cookie pattern
+// CSRF Protection with cloud deployment settings
 const csrfProtection = csrf({ 
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
+    secure: true, // 在生產環境中必須使用 HTTPS
+    sameSite: 'none', // 允許跨域 cookie
+    domain: process.env.COOKIE_DOMAIN || '.your-domain.com' // 設置 cookie 域名
   }
 });
 
@@ -48,8 +53,9 @@ app.get('/api/csrf-token', (req, res) => {
   // Set the token in a cookie
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
+    secure: true,
+    sameSite: 'none',
+    domain: process.env.COOKIE_DOMAIN || '.your-domain.com'
   });
   // Send the token in the response
   res.json({ csrfToken: token });
