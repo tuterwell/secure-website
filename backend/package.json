@@ -20,6 +20,8 @@
   "type": "module",
   "scripts": {
     "start": "yarn prisma migrate deploy && node --experimental-specifier-resolution=node src/index.js",
-    "dev": "nodemon --experimental-specifier-resolution=node src/index.js"
+    "dev": "nodemon --experimental-specifier-resolution=node src/index.js",
+    "build": "prisma generate",
+    "prod": "NODE_ENV=production node --experimental-specifier-resolution=node src/index.js"
   }
 }
