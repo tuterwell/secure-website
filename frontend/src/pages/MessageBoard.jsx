@@ -16,7 +16,10 @@ export default function MessageBoard() {
   const fetchCsrfToken = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/csrf-token`, {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       if (!response.ok) throw new Error('Failed to fetch CSRF token');
       const data = await response.json();
@@ -30,7 +33,10 @@ export default function MessageBoard() {
   const fetchPosts = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts`, {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       if (!response.ok) throw new Error('Failed to fetch posts');
       const data = await response.json();
