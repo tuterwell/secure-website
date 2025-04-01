@@ -9,12 +9,29 @@ export default function MessageBoard() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [csrfToken, setCsrfToken] = useState("");
   const { isLoggedIn, user } = useAuth();
+
+  // Fetch CSRF token
+  const fetchCsrfToken = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/csrf-token`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch CSRF token');
+      const data = await response.json();
+      setCsrfToken(data.csrfToken);
+    } catch (err) {
+      console.error('Error fetching CSRF token:', err);
+    }
+  };
 
   // Fetch posts
   const fetchPosts = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts`, {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error('Failed to fetch posts');
       const data = await response.json();
       setPosts(data);
@@ -25,6 +42,7 @@ export default function MessageBoard() {
   };
 
   useEffect(() => {
+    fetchCsrfToken();
     fetchPosts();
   }, []);
 
@@ -45,8 +63,10 @@ export default function MessageBoard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'XSRF-TOKEN': csrfToken
         },
+        credentials: 'include',
         body: JSON.stringify({ message }),
       });
 
@@ -71,8 +91,10 @@ export default function MessageBoard() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/posts/${postId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'XSRF-TOKEN': csrfToken
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -88,75 +110,83 @@ export default function MessageBoard() {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6 text-center">
-      <Card>
-        <CardContent className="pt-6">
-          <h2 className="text-lg font-bold">Message Board</h2>
-          {error && <div className="text-red-500 text-sm">{error}</div>}
-          <div className="space-y-2">
-            {posts.map((post) => (
-              <div key={post.id} className="p-3 bg-gray-100 rounded-lg text-left relative">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0">
-                    {post.user.avatar ? (
-                      <img 
-                        src={`${import.meta.env.VITE_API_URL}${post.user.avatar}`}
-                        alt={`${post.user.name}'s avatar`}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-500 text-sm">
-                          {post.user.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
+    <div className="container mx-auto p-6">
+      {/* Message Input Area */}
+      <div className="max-w-2xl mx-auto mb-8">
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="text-lg font-bold text-center">Message Board</h2>
+            {error && <div className="text-red-500 text-sm text-center">{error}</div>}
+            <div className="flex space-x-2 mt-4 justify-center">
+              <Input 
+                value={message} 
+                onChange={(e) => setMessage(e.target.value)} 
+                placeholder={isLoggedIn ? "Leave a message" : "Please login to post"}
+                disabled={!isLoggedIn}
+                className="max-w-md"
+              />
+              <Button 
+                onClick={handleSendMessage}
+                disabled={!isLoggedIn || isLoading || !message.trim()}
+              >
+                {isLoading ? 'Sending...' : 'Send'}
+              </Button>
+            </div>
+            {!isLoggedIn && (
+              <p className="text-sm text-gray-500 mt-2 text-center">
+                Please login to post messages
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Posts List */}
+      <div className="max-w-8xl mx-auto">
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <div key={post.id} className="bg-white rounded-lg shadow p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  {post.user.avatar ? (
+                    <img 
+                      src={`${import.meta.env.VITE_API_URL}${post.user.avatar}`}
+                      alt={`${post.user.name}'s avatar`}
+                      className="w-24 h-24 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-gray-500 text-lg">
+                        {post.user.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-700">{post.user.name}</span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(post.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {isLoggedIn && post.user.id === user?.id && (
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        className="text-red-500 hover:text-red-700 text-sm p-1"
+                        title="Delete message"
+                      >
+                        ×
+                      </button>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-700">{post.user.name}</span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(post.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                      {isLoggedIn && post.user.id === user?.id && (
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          className="text-red-500 hover:text-red-700 text-sm p-1"
-                          title="Delete message"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                    <div className="text-gray-600 mt-1">{post.message}</div>
-                  </div>
+                  <div className="text-gray-600 mt-1">{post.message}</div>
                 </div>
               </div>
-            ))}
-          </div>
-          <div className="flex space-x-2 mt-4">
-            <Input 
-              value={message} 
-              onChange={(e) => setMessage(e.target.value)} 
-              placeholder={isLoggedIn ? "Leave a message" : "Please login to post"}
-              disabled={!isLoggedIn}
-            />
-            <Button 
-              onClick={handleSendMessage}
-              disabled={!isLoggedIn || isLoading || !message.trim()}
-            >
-              {isLoading ? 'Sending...' : 'Send'}
-            </Button>
-          </div>
-          {!isLoggedIn && (
-            <p className="text-sm text-gray-500 mt-2">
-              Please login to post messages
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

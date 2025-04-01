@@ -18,16 +18,13 @@ function AppContent() {
   }
 
   return (
-    <div className="w-screen h-screen bg-gray-200">
+    <div className="bg-gray-200 p-0 m-0">
       {/* 固定導航欄 */}
       <nav className="fixed top-0 left-0 w-full bg-black text-white p-4 flex justify-between items-center">
         <span className="font-bold">網路攻防實習</span>
-        <span className="font-bold">Visitor Count: {visitorCount}</span>
         <div className="flex items-center">
           <Link to="/" className="text-white mr-4 p-2 rounded hover:bg-gray-700">Home</Link>
           <Link to="/about" className="text-white mr-4 p-2 rounded hover:bg-gray-700">About</Link>
-          <Link to="/users" className="text-white mr-4 p-2 rounded hover:bg-gray-700">Users</Link>
-          <Link to="/createuser" className="text-white mr-4 p-2 rounded hover:bg-gray-700">Create User</Link>
           {isLoggedIn ? (
             <div className="flex items-center">
               <span className="text-white mr-4">Welcome, {user?.name}</span>
@@ -49,12 +46,10 @@ function AppContent() {
         </div>
       </nav>
 
-      <div className="mt-16">
+      <div className="mt-16 bg-gray-200 p-0 m-0 h-screen w-screen">
         <Routes>
           <Route path="/" element={<MessageBoard />} />
           <Route path="/about" element={<About />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/createuser" element={<CreateUser />} />
           <Route path="/login" element={<Login />} />
         </Routes>
       </div>
