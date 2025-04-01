@@ -22,8 +22,14 @@ app.use(cors({
   credentials: true
 }));
 
-// CSRF Protection
-const csrfProtection = csrf({ cookie: true });
+// CSRF Protection with double submit cookie pattern
+const csrfProtection = csrf({ 
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  }
+});
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -37,7 +43,16 @@ app.use('/api/posts', postsRoutes);
 
 // CSRF token route
 app.get('/api/csrf-token', (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
+  // Generate a new CSRF token
+  const token = req.csrfToken();
+  // Set the token in a cookie
+  res.cookie('XSRF-TOKEN', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
+  // Send the token in the response
+  res.json({ csrfToken: token });
 });
 
 // Database connection check

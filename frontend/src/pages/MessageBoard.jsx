@@ -64,20 +64,23 @@ export default function MessageBoard() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'XSRF-TOKEN': csrfToken
+          'X-CSRF-Token': csrfToken
         },
         credentials: 'include',
         body: JSON.stringify({ message }),
       });
 
-      if (!response.ok) throw new Error('Failed to post message');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to post message');
+      }
 
       const newPost = await response.json();
       setPosts([newPost, ...posts]);
       setMessage("");
     } catch (err) {
       console.error('Error posting message:', err);
-      setError('Failed to post message');
+      setError(err.message || 'Failed to post message');
     } finally {
       setIsLoading(false);
     }
@@ -92,14 +95,14 @@ export default function MessageBoard() {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'XSRF-TOKEN': csrfToken
+          'X-CSRF-Token': csrfToken
         },
         credentials: 'include'
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to delete message');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete message');
       }
 
       setPosts(posts.filter(post => post.id !== postId));
